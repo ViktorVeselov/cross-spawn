@@ -71,6 +71,22 @@ pub(crate) fn resolve(
     };
 
     if force_shell || needs_shell {
+        // Validate inputs for control characters to prevent command injection (CVE-2024-24576 / BatBadBut)
+        for arg in &new_args {
+            if arg.contains('\0') || arg.contains('\r') || arg.contains('\n') {
+                return Err(Error::Io(std::io::Error::new(
+                    std::io::ErrorKind::InvalidInput,
+                    "Arguments cannot contain null bytes, carriage returns, or newlines when executing via shell on Windows"
+                )));
+            }
+        }
+        if command.contains('\0') || command.contains('\r') || command.contains('\n') {
+            return Err(Error::Io(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                "Command path cannot contain null bytes, carriage returns, or newlines on Windows"
+            )));
+        }
+
         let normalized = normalize_posix(&command);
         let escaped_cmd = escape_command(&normalized);
         let needs_double = match (&command_file, double_escape_validator) {

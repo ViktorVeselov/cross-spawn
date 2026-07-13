@@ -310,3 +310,19 @@ fn different_path_key_in_env() {
     let o = c.output().expect("spawn");
     assert_eq!(norm(&String::from_utf8_lossy(&o.stdout).trim()), "you sure are someone");
 }
+
+#[cfg(windows)]
+#[test]
+fn security_control_characters_rejected_on_windows() {
+    let mut c = Command::new(fixtures().join("say-foo").to_str().unwrap());
+    c.arg("hello\nworld");
+    let res = c.spawn();
+    assert!(res.is_err());
+    let err = res.unwrap_err();
+    match err {
+        Error::Io(e) => {
+            assert_eq!(e.kind(), std::io::ErrorKind::InvalidInput);
+        }
+        other => panic!("expected Io(InvalidInput) error, got: {:?}", other),
+    }
+}
