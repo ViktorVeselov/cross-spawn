@@ -83,6 +83,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(windows)]
     fn test_spawn_cmd() {
         let mut cmd = Command::new("cmd");
         cmd.args(["/C", "echo", "test"]);
@@ -91,6 +92,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(windows)]
     fn test_status() {
         let mut cmd = Command::new("cmd");
         cmd.args(["/C", "exit", "0"]);
@@ -121,6 +123,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(windows)]
     fn test_env() {
         let mut cmd = Command::new("cmd");
         cmd.args(["/C", "set", "MY_TEST_VAR"]);
@@ -132,6 +135,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(windows)]
     fn test_cwd() {
         let tmp = std::env::temp_dir();
         let mut cmd = Command::new("cmd");
