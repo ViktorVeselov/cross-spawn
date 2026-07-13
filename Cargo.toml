@@ -1,11 +1,11 @@
 [package]
 name = "cross-spawn"
-version = "0.1.2"
+version = "0.1.3"
 edition = "2024"
 description = "A cross platform solution for Rust for spawning processes. Drop-in replacement for std::process::Command with Windows-specific enhancements: PATHEXT resolution, CMD built-in detection, CREATE_NO_WINDOW, and cross-platform kill."
 license = "MIT"
 repository = "https://github.com/ViktorVeselov/cross-spawn"
-keywords = ["spawn", "process", "cross-platform", "windows", "command"]
+keywords = ["spawn", "process", "windows", "macos", "linux"]
 categories = ["os"]
 
 [dependencies]

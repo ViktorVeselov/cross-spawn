@@ -1,0 +1,41 @@
+name: Auto Deploy to Crates.io
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+jobs:
+  publish:
+    name: Publish to Crates.io
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Run tests
+        run: cargo test
+
+      - name: Check version and publish
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_KEY }}
+        run: |
+          # Extract local version using cargo read-manifest
+          LOCAL_VERSION=$(cargo read-manifest | jq -r '.version')
+          echo "Local version: $LOCAL_VERSION"
+
+          # Fetch remote version from crates.io API
+          RESPONSE=$(curl -s https://crates.io/api/v1/crates/cross-spawn || echo "")
+          REMOTE_VERSION=$(echo "$RESPONSE" | jq -r '.crate.max_version' 2>/dev/null || echo "0.0.0")
+          echo "Remote version: $REMOTE_VERSION"
+
+          if [ "$LOCAL_VERSION" != "$REMOTE_VERSION" ]; then
+            echo "New version $LOCAL_VERSION detected! Publishing to crates.io..."
+            cargo publish
+          else
+            echo "Version is already up to date ($REMOTE_VERSION). Skipping publish."
+          fi
