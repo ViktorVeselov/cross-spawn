@@ -3,6 +3,7 @@
 A cross platform solution for spawning processes. Drop-in replacement for `std::process::Command` with Windows-specific enhancements.
 
 [![crates.io](https://img.shields.io/crates/v/cross-spawn.svg)](https://crates.io/crates/cross-spawn)
+[![downloads](https://img.shields.io/crates/d/cross-spawn.svg)](https://crates.io/crates/cross-spawn)
 [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE-MIT)
 
 ## Why
