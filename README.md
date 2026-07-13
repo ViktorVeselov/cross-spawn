@@ -70,6 +70,22 @@ Plus the free function:
 
 - `cross_spawn::kill(pid)` — cross-platform process termination
 
+## Development
+
+### Running Tests
+The test suite is written in pure Rust and does not require Node.js or any external runtimes. Test fixtures are generated dynamically during the test execution in `target/test_fixtures/` and `target/unit_fixtures/`.
+
+To run the unit and integration tests:
+```bash
+cargo test
+```
+
+### Running Examples
+You can run the demonstration example to verify process spawning:
+```bash
+cargo run --example demo
+```
+
 ## License
 
 MIT
