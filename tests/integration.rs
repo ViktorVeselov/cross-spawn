@@ -16,32 +16,16 @@ fn fixtures() -> PathBuf {
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
         fs::create_dir_all(dir.join("node_modules/.bin")).unwrap();
-
-        // 1. say-foo
         fs::write(dir.join("say-foo"), "#!/usr/bin/env test_helper\n").unwrap();
         fs::write(dir.join("say-foo.bat"), "@test_helper echo foo\n").unwrap();
-
-        // 2. shebang
         fs::write(dir.join("shebang"), "#!/usr/bin/env test_helper\nshebang works!").unwrap();
-
-        // 3. shebang-enoent
         fs::write(dir.join("shebang-enoent"), "#!/usr/bin/env somecommandthatwillneverexist\n").unwrap();
-
-        // 4. %CD%
         fs::write(dir.join("%CD%"), "#!/usr/bin/env test_helper\n").unwrap();
         fs::write(dir.join("%CD%.bat"), "@test_helper echo special\n").unwrap();
-
-        // 5. ()%!^&;, 
         fs::write(dir.join("()%!^&;, "), "#!/usr/bin/env test_helper\n").unwrap();
         fs::write(dir.join("()%!^&;, .bat"), "@test_helper echo special\n").unwrap();
-
-        // 6. cmd-shim
         fs::write(dir.join("node_modules/.bin/echo-cmd-shim.cmd"), "@test_helper echo %*\n").unwrap();
-
-        // 7. whoami.cmd
         fs::write(dir.join("whoami.cmd"), "@echo you sure are someone\n").unwrap();
-
-        // 8. exit-1
         fs::write(dir.join("exit-1"), "#!/usr/bin/env test_helper\n").unwrap();
         fs::write(dir.join("exit-1.bat"), "@test_helper exit 1\n").unwrap();
 
@@ -148,7 +132,7 @@ fn special_char_args() {
     let args = [
         "foo", "()", "foo", "[]", "foo", "%!", "foo", "^<", "foo", ">&", "foo", "|;", "foo",
         ", ", "foo", "!=", "foo", "\\*", "foo", "\"f\"", "foo", "?.", "foo", "=`", "foo", "'",
-        "foo", "\\\"", "bar\\", // See https://github.com/IndigoUnited/node-cross-spawn/issues/82
+        "foo", "\\\"", "bar\\",
         "\"(foo|bar>baz)\"", "\"(foo|bar>baz|foz)\"",
     ];
     let mut c = Command::new(helper);
@@ -230,7 +214,6 @@ fn relative_posix_path_custom_cwd() {
 
 #[test]
 fn enoent_unknown_command() {
-    // custom cwd first so resolution is deterministic
     let mut c = Command::new("somecommandthatwillneverexist");
     c.arg("foo");
     let res = c.spawn();
@@ -314,15 +297,45 @@ fn different_path_key_in_env() {
 #[cfg(windows)]
 #[test]
 fn security_control_characters_rejected_on_windows() {
+    // Exists on disk
     let mut c = Command::new(fixtures().join("say-foo").to_str().unwrap());
     c.arg("hello\nworld");
     let res = c.spawn();
     assert!(res.is_err());
-    let err = res.unwrap_err();
-    match err {
-        Error::Io(e) => {
-            assert_eq!(e.kind(), std::io::ErrorKind::InvalidInput);
-        }
-        other => panic!("expected Io(InvalidInput) error, got: {:?}", other),
-    }
+    assert!(res.unwrap_err().to_string().contains("Arguments cannot contain carriage returns or newlines"));
+    // Does not exist on disk
+    let mut c = Command::new("nonexistent\ncommand");
+    let res = c.spawn();
+    assert!(res.is_err());
+    assert!(res.unwrap_err().to_string().contains("Command path cannot contain carriage returns or newlines"));
+
+    let mut c = Command::new("echo");
+    c.shell(true);
+    c.arg("hello\nworld");
+    let res = c.spawn();
+    assert!(res.is_err());
+    assert!(res.unwrap_err().to_string().contains("Arguments cannot contain carriage returns or newlines"));
+
+    // Env vars
+    let mut c = Command::new("echo");
+    c.shell(true);
+    c.env("KEY\n", "VAL");
+    let res = c.spawn();
+    assert!(res.is_err());
+    assert!(res.unwrap_err().to_string().contains("Environment variable keys cannot contain carriage returns or newlines"));
+}
+
+#[test]
+fn security_null_bytes_rejected() {
+    // Unconditional NUL byte check
+    let mut c = Command::new("echo\0");
+    let res = c.spawn();
+    assert!(res.is_err());
+    assert!(res.unwrap_err().to_string().contains("Command path cannot contain null bytes"));
+
+    let mut c = Command::new("echo");
+    c.arg("hello\0world");
+    let res = c.spawn();
+    assert!(res.is_err());
+    assert!(res.unwrap_err().to_string().contains("Arguments cannot contain null bytes"));
 }

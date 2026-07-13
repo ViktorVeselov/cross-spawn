@@ -1,6 +1,6 @@
 [package]
 name = "cross-spawn"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2024"
 description = "A cross platform solution for Rust for spawning processes. Drop-in replacement for std::process::Command with Windows-specific enhancements: PATHEXT resolution, CMD built-in detection, CREATE_NO_WINDOW, and cross-platform kill."
 license = "MIT"

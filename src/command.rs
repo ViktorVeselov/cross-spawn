@@ -172,6 +172,38 @@ impl Command {
             return Err(Error::EmptyCommand);
         }
 
+        // Unconditional NUL byte check (G3/G4)
+        if self.program.contains('\0') {
+            return Err(Error::Io(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                "Command path cannot contain null bytes"
+            )));
+        }
+        for arg in &self.args {
+            if arg.contains('\0') {
+                return Err(Error::Io(std::io::Error::new(
+                    std::io::ErrorKind::InvalidInput,
+                    "Arguments cannot contain null bytes"
+                )));
+            }
+        }
+        for (k, v) in &self.env_vars {
+            if k.contains('\0') {
+                return Err(Error::Io(std::io::Error::new(
+                    std::io::ErrorKind::InvalidInput,
+                    "Environment variable keys cannot contain null bytes"
+                )));
+            }
+            if let Some(val) = v {
+                if val.contains('\0') {
+                    return Err(Error::Io(std::io::Error::new(
+                        std::io::ErrorKind::InvalidInput,
+                        "Environment variable values cannot contain null bytes"
+                    )));
+                }
+            }
+        }
+
         if self.shell {
             return self.spawn_via_shell();
         }
@@ -219,6 +251,38 @@ impl Command {
 
     #[cfg(windows)]
     fn spawn_via_shell(&mut self) -> Result<Child, Error> {
+        // Validate inputs for control characters to prevent command injection (CVE-2024-24576 / BatBadBut)
+        if self.program.contains('\r') || self.program.contains('\n') {
+            return Err(Error::Io(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                "Command path cannot contain carriage returns or newlines on Windows"
+            )));
+        }
+        for arg in &self.args {
+            if arg.contains('\r') || arg.contains('\n') {
+                return Err(Error::Io(std::io::Error::new(
+                    std::io::ErrorKind::InvalidInput,
+                    "Arguments cannot contain carriage returns or newlines when executing via shell on Windows"
+                )));
+            }
+        }
+        for (k, v) in &self.env_vars {
+            if k.contains('\r') || k.contains('\n') {
+                return Err(Error::Io(std::io::Error::new(
+                    std::io::ErrorKind::InvalidInput,
+                    "Environment variable keys cannot contain carriage returns or newlines on Windows"
+                )));
+            }
+            if let Some(val) = v {
+                if val.contains('\r') || val.contains('\n') {
+                    return Err(Error::Io(std::io::Error::new(
+                        std::io::ErrorKind::InvalidInput,
+                        "Environment variable values cannot contain carriage returns or newlines on Windows"
+                    )));
+                }
+            }
+        }
+
         let joined = std::iter::once(self.program.clone())
             .chain(self.args.iter().cloned())
             .collect::<Vec<_>>()
