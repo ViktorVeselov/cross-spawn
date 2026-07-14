@@ -57,7 +57,11 @@ fn run_out(program: &str, args: &[&str]) -> Result<(String, i32), Error> {
         .unwrap()
         .to_path_buf();
     let cur = std::env::var("PATH").unwrap_or_default();
-    c.env("PATH", format!("{};{}", helper_dir.to_string_lossy(), cur));
+    let mut paths = vec![helper_dir];
+    paths.extend(std::env::split_paths(&cur));
+    if let Ok(new_path) = std::env::join_paths(paths) {
+        c.env("PATH", new_path);
+    }
     let o = c.output()?;
     let s = String::from_utf8_lossy(&o.stdout).to_string();
     let code = o.status.code().unwrap_or(-1);
@@ -98,10 +102,9 @@ fn shebang_via_path_env() {
     let helper_dir = std::path::Path::new(env!("CARGO_BIN_EXE_test_helper"))
         .parent()
         .unwrap()
-        .to_string_lossy()
-        .to_string();
+        .to_path_buf();
     let mut c = Command::new("shebang");
-    let fixtures_path = fixtures().to_string_lossy().to_string();
+    let fixtures_path = fixtures();
     let cur = std::env::var("PATH").unwrap_or_default();
     c.env_clear();
     for (k, v) in std::env::vars() {
@@ -110,7 +113,11 @@ fn shebang_via_path_env() {
         }
         c.env(&k, &v);
     }
-    c.env("PATH", format!("{};{};{}", fixtures_path, helper_dir, cur));
+    let mut paths = vec![fixtures_path, helper_dir];
+    paths.extend(std::env::split_paths(&cur));
+    if let Ok(new_path) = std::env::join_paths(paths) {
+        c.env("PATH", new_path);
+    }
     let o = c.output().expect("spawn");
     assert_eq!(String::from_utf8_lossy(&o.stdout), "shebang works!");
 }
