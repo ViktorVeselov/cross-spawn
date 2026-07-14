@@ -48,10 +48,7 @@ fn fixtures() -> PathBuf {
     dir
 }
 
-fn run_out(program: &str, args: &[&str]) -> Result<(String, i32), Error> {
-    let mut c = Command::new(program);
-    c.args(args);
-    // Prepend test_helper binary directory to PATH so shebang resolution can find it
+fn prepend_test_helper_to_path(c: &mut Command) {
     let helper_dir = std::path::Path::new(env!("CARGO_BIN_EXE_test_helper"))
         .parent()
         .unwrap()
@@ -62,6 +59,12 @@ fn run_out(program: &str, args: &[&str]) -> Result<(String, i32), Error> {
     if let Ok(new_path) = std::env::join_paths(paths) {
         c.env("PATH", new_path);
     }
+}
+
+fn run_out(program: &str, args: &[&str]) -> Result<(String, i32), Error> {
+    let mut c = Command::new(program);
+    c.args(args);
+    prepend_test_helper_to_path(&mut c);
     let o = c.output()?;
     let s = String::from_utf8_lossy(&o.stdout).to_string();
     let code = o.status.code().unwrap_or(-1);
@@ -201,11 +204,13 @@ fn relative_posix_path() {
 fn relative_posix_path_custom_cwd() {
     // `test_fixtures/say-foo` is resolved relative to the custom `cwd` ("target").
     let mut c = Command::new("test_fixtures/say-foo");
+    prepend_test_helper_to_path(&mut c);
     c.current_dir("target");
     let o = c.output().expect("spawn");
     assert_eq!(norm(String::from_utf8_lossy(&o.stdout).trim()), "foo");
 
     let mut c = Command::new("./test_fixtures/say-foo");
+    prepend_test_helper_to_path(&mut c);
     c.current_dir("target");
     let o = c.output().expect("spawn");
     assert_eq!(norm(String::from_utf8_lossy(&o.stdout).trim()), "foo");
@@ -213,6 +218,7 @@ fn relative_posix_path_custom_cwd() {
     #[cfg(windows)]
     {
         let mut c = Command::new("./test_fixtures/say-foo.bat");
+        prepend_test_helper_to_path(&mut c);
         c.current_dir("target");
         let o = c.output().expect("spawn");
         assert_eq!(norm(String::from_utf8_lossy(&o.stdout).trim()), "foo");
@@ -234,6 +240,7 @@ fn enoent_unknown_command() {
 #[test]
 fn no_enoent_when_command_exists_but_exits_1() {
     let mut c = Command::new(fixtures().join("exit-1").to_str().unwrap());
+    prepend_test_helper_to_path(&mut c);
     let o = c.output().expect("spawn should succeed (no ENOENT)");
     assert_eq!(o.status.code(), Some(1));
 }
