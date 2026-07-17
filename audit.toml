@@ -1,0 +1,16 @@
+# Configuration for cargo-audit
+
+[database]
+# Path to the local copy of the advisory database
+path = "~/.cargo/advisory-db"
+
+# URL of the advisory database Git repository
+url = "https://github.com/RustSec/advisory-db.git"
+
+[advisories]
+# Ignore specific advisory IDs (e.g., ["RUSTSEC-YYYY-XXXX"])
+ignore = []
+
+[output]
+# Deny policies (e.g. deny warnings, deny yanked crates)
+deny = ["vulnerabilities"]
